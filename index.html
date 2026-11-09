@@ -62,8 +62,20 @@ $("play").onclick=()=>modal('<h2>Jugar</h2><p>Elige tu forma de entrar en la man
 $("custom").onclick=()=>modal('<h2>Sala personalizada</h2><p>Crea una sala privada o introduce un código de invitación.</p><label>Nombre de sala<input id="roomName" placeholder="Mi mansión" maxlength="20"></label><label>Código de sala<input id="roomCode" placeholder="ABC123" maxlength="6"></label><button class="purple" id="create">Crear sala</button> <button class="dark" id="join">Entrar con código</button><p id="roomMsg">Interfaz preparada; aún falta conectar el servidor online. No se creará una sala real.</p>');
 $("pass").onclick=()=>modal('<h2>⭐ Game Pass</h2><p>Ruta de recompensas de temporada, inspirada en el pase dorado. Esta maqueta no procesa pagos.</p><div class="bar"><i style="width:12%"></i></div><p><b>Nivel 1:</b> recompensa de bienvenida (vista previa).</p><button class="purple" id="claim">Reclamar recompensa de prueba</button>');
 $("shop").onclick=()=>modal('<h2>🛒 Tienda</h2><p>Objetos de muestra; no hay compras reales.</p><div class="shop"><div class="item">🎩<b>Sombrero</b><p>250 monedas</p></div><div class="item">✨<b>Efecto brillante</b><p>400 monedas</p></div><div class="item">🧥<b>Traje misterioso</b><p>600 monedas</p></div></div>');
-$("settings").onclick=()=>modal('<h2>⚙️ Ajustes</h2><h3>Mi cuenta</h3><p>Jugador: <b>'+escapeHTML(currentAccount?.nickname||"—")+'</b></p><p style="overflow-wrap:anywhere">ID de usuario: <code>'+escapeHTML(currentAccount?.id||"—")+'</code></p><button class="dark" id="logout">Cerrar sesión</button><hr><p>Música　<input type="checkbox" checked></p><p>Efectos de sonido　<input type="checkbox" checked></p><p>Idioma　<select><option>Español</option><option>English</option></select></p><p>Calidad gráfica　<select><option>Alta</option><option>Media</option><option>Baja</option></select></p><small>Cuenta local: este ID identifica tu perfil en este navegador. Aún no hay cuentas online.</small>');
-$("modalContent").onclick=e=>{if(e.target.id==="openDemo")location.href="demo-0.1.html";if(e.target.id==="create"||e.target.id==="join")$("roomMsg").textContent="Aún no está conectado el servidor multijugador; no se ha creado ni unido ninguna sala.";if(e.target.id==="claim"){e.target.textContent="Recompensa de prueba reclamada";e.target.disabled=true}};
+$("settings").onclick=()=>{
+ let adminButton=currentAccount?.id==="SMR-FAC1C675-EF34-4222-82CB-2B793990D78F"?'<button class="purple" id="openAdmin">🛡️ ADMIN PANEL</button>':'';
+ modal('<h2>⚙️ Ajustes</h2><h3>Mi cuenta</h3><p>Jugador: <b>'+escapeHTML(currentAccount?.nickname||"—")+'</b></p><p style="overflow-wrap:anywhere">ID de usuario: <code>'+escapeHTML(currentAccount?.id||"—")+'</code></p>'+adminButton+'<button class="dark" id="logout">Cerrar sesión</button><hr><p>Música　<input type="checkbox" checked></p><p>Efectos de sonido　<input type="checkbox" checked></p><p>Idioma　<select><option>Español</option><option>English</option></select></p><p>Calidad gráfica　<select><option>Alta</option><option>Media</option><option>Baja</option></select></p><small>Cuenta local: este ID identifica tu perfil en este navegador. Aún no hay cuentas online.</small>');
+};
+$("modalContent").onclick=e=>{
+ if(e.target.id==="openAdmin"){
+  if(currentAccount?.id!=="SMR-FAC1C675-EF34-4222-82CB-2B793990D78F")return;
+  const accounts=readAccounts();
+  modal('<h2>🛡️ Panel de administración SMR</h2><p>Administrador: <b>'+escapeHTML(currentAccount.nickname)+'</b></p><div class="item"><b>'+accounts.length+'</b><small>Perfiles guardados en este navegador</small></div><h3>Usuarios locales</h3>'+accounts.map(a=>'<div class="item" style="text-align:left;margin:7px 0"><b>'+escapeHTML(a.nickname)+'</b><br><small>'+escapeHTML(a.id)+'</small></div>').join('')+'<p class="accountFine">Aviso: este panel es una vista local de prueba. Como aún no hay servidor ni base de datos online, no administra usuarios de otros dispositivos.</p>');
+ }
+ if(e.target.id==="openDemo")location.href="demo-0.1.html";
+ if(e.target.id==="create"||e.target.id==="join")$("roomMsg").textContent="Aún no está conectado el servidor multijugador; no se ha creado ni unido ninguna sala.";
+ if(e.target.id==="claim"){e.target.textContent="Recompensa de prueba reclamada";e.target.disabled=true}
+};
 
 let accountMode="register";
 let currentAccount=null;
