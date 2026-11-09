@@ -32,12 +32,14 @@
   </div>
   <form id="accountForm">
    <label for="playerNick">Nombre de jugador</label>
-   <input id="playerNick" maxlength="18" minlength="2" autocomplete="nickname" placeholder="Tu nombre en el juego" required>
+   <input id="playerNick" maxlength="18" minlength="2" autocomplete="username" placeholder="Tu nombre de usuario" required>
+   <label for="playerPassword">Contraseña</label>
+   <input id="playerPassword" type="password" minlength="6" maxlength="128" autocomplete="current-password" placeholder="Mínimo 6 caracteres" required>
    <div class="accountActions">
     <button type="submit" class="purple" id="accountSubmit">Crear perfil</button>
    </div>
   </form>
-  <p class="accountFine">Versión de prueba: el perfil se guarda solo en este navegador. Todavía no existe una cuenta online ni recuperación de cuenta. No introduzcas contraseñas ni datos personales.</p>
+  <p class="accountFine">Cuenta local de prueba: tus datos se guardan solo en este navegador. La cuenta no funciona todavía entre dispositivos y no tiene recuperación de contraseña.</p>
   <p id="accountMessage" aria-live="polite" style="min-height:20px;color:#ffd38b"></p>
  </section>
 </div>
@@ -60,54 +62,99 @@ $("play").onclick=()=>modal('<h2>Jugar</h2><p>Elige tu forma de entrar en la man
 $("custom").onclick=()=>modal('<h2>Sala personalizada</h2><p>Crea una sala privada o introduce un código de invitación.</p><label>Nombre de sala<input id="roomName" placeholder="Mi mansión" maxlength="20"></label><label>Código de sala<input id="roomCode" placeholder="ABC123" maxlength="6"></label><button class="purple" id="create">Crear sala</button> <button class="dark" id="join">Entrar con código</button><p id="roomMsg">Interfaz preparada; aún falta conectar el servidor online. No se creará una sala real.</p>');
 $("pass").onclick=()=>modal('<h2>⭐ Game Pass</h2><p>Ruta de recompensas de temporada, inspirada en el pase dorado. Esta maqueta no procesa pagos.</p><div class="bar"><i style="width:12%"></i></div><p><b>Nivel 1:</b> recompensa de bienvenida (vista previa).</p><button class="purple" id="claim">Reclamar recompensa de prueba</button>');
 $("shop").onclick=()=>modal('<h2>🛒 Tienda</h2><p>Objetos de muestra; no hay compras reales.</p><div class="shop"><div class="item">🎩<b>Sombrero</b><p>250 monedas</p></div><div class="item">✨<b>Efecto brillante</b><p>400 monedas</p></div><div class="item">🧥<b>Traje misterioso</b><p>600 monedas</p></div></div>');
-$("settings").onclick=()=>modal('<h2>⚙️ Ajustes</h2><p>Música　<input type="checkbox" checked></p><p>Efectos de sonido　<input type="checkbox" checked></p><p>Idioma　<select><option>Español</option><option>English</option></select></p><p>Calidad gráfica　<select><option>Alta</option><option>Media</option><option>Baja</option></select></p><small>Los ajustes son visuales y todavía no se guardan.</small>');
+$("settings").onclick=()=>modal('<h2>⚙️ Ajustes</h2><h3>Mi cuenta</h3><p>Jugador: <b>'+escapeHTML(currentAccount?.nickname||"—")+'</b></p><p style="overflow-wrap:anywhere">ID de usuario: <code>'+escapeHTML(currentAccount?.id||"—")+'</code></p><button class="dark" id="logout">Cerrar sesión</button><hr><p>Música　<input type="checkbox" checked></p><p>Efectos de sonido　<input type="checkbox" checked></p><p>Idioma　<select><option>Español</option><option>English</option></select></p><p>Calidad gráfica　<select><option>Alta</option><option>Media</option><option>Baja</option></select></p><small>Cuenta local: este ID identifica tu perfil en este navegador. Aún no hay cuentas online.</small>');
 $("modalContent").onclick=e=>{if(e.target.id==="openDemo")location.href="demo-0.1.html";if(e.target.id==="create"||e.target.id==="join")$("roomMsg").textContent="Aún no está conectado el servidor multijugador; no se ha creado ni unido ninguna sala.";if(e.target.id==="claim"){e.target.textContent="Recompensa de prueba reclamada";e.target.disabled=true}};
 
 let accountMode="register";
+let currentAccount=null;
 const accountStoreKey="mansionRevivedProfileV1";
+const activeSessionKey="mansionRevivedSessionV1";
+const makeId=()=>("SMR-"+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+"-"+Math.random().toString(36).slice(2))).toUpperCase();
+const escapeHTML=v=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function passwordHash(password,salt){
+ const enc=new TextEncoder();
+ const key=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveBits"]);
+ const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:Uint8Array.from(atob(salt),c=>c.charCodeAt(0)),iterations:150000,hash:"SHA-256"},key,256);
+ return btoa(String.fromCharCode(...new Uint8Array(bits)));
+}
+function newSalt(){const bytes=crypto.getRandomValues(new Uint8Array(16));return btoa(String.fromCharCode(...bytes))}
+function readAccount(){try{return JSON.parse(localStorage.getItem(accountStoreKey)||"null")}catch(e){return null}}
+function setSignedIn(account){
+ currentAccount=account;
+ sessionStorage.setItem(activeSessionKey,account.id);
+ $("accountGate").classList.remove("show");
+ let badge=$("accountBadge");
+ if(!badge){badge=document.createElement("div");badge.id="accountBadge";document.body.append(badge)}
+ badge.textContent="Jugador: "+account.nickname;
+}
 function accountModeSet(mode){
  accountMode=mode;
  $("registerTab").classList.toggle("selected",mode==="register");
  $("loginTab").classList.toggle("selected",mode==="login");
  $("registerTab").classList.toggle("dark",mode!=="register");
  $("loginTab").classList.toggle("dark",mode!=="login");
- $("accountSubmit").textContent=mode==="register"?"Crear perfil":"Entrar";
- $("accountTitle").textContent=mode==="register"?"¡Bienvenido a la mansión!":"Qué bueno verte de nuevo";
- $("accountIntro").textContent=mode==="register"?"Crea tu perfil para entrar.":"Escribe el nombre del perfil que guardaste en este navegador.";
+ $("accountSubmit").textContent=mode==="register"?"Crear cuenta":"Iniciar sesión";
+ $("accountTitle").textContent=mode==="register"?"Crear cuenta":"Iniciar sesión";
+ $("accountIntro").textContent=mode==="register"?"Elige un nombre y una contraseña para crear tu cuenta.":"Introduce el nombre y la contraseña de tu cuenta.";
+ $("playerPassword").autocomplete=mode==="register"?"new-password":"current-password";
  $("accountMessage").textContent="";
 }
 function accountStart(){
- let saved=null;
- try{saved=JSON.parse(localStorage.getItem(accountStoreKey)||"null")}catch(e){}
- if(saved&&saved.nickname){
-  const badge=document.createElement("div");badge.id="accountBadge";badge.textContent="Jugador: "+saved.nickname;document.body.append(badge);
-  return;
- }
+ const saved=readAccount();
+ let active=null;try{active=sessionStorage.getItem(activeSessionKey)}catch(e){}
+ if(saved&&active===saved.id){setSignedIn(saved);return}
  $("accountGate").classList.add("show");
+ accountModeSet(saved?"login":"register");
 }
 $("registerTab").onclick=()=>accountModeSet("register");
 $("loginTab").onclick=()=>accountModeSet("login");
-$("accountForm").addEventListener("submit",e=>{
+$("accountForm").addEventListener("submit",async e=>{
  e.preventDefault();
  const nickname=$("playerNick").value.trim().replace(/\s+/g," ");
+ const password=$("playerPassword").value;
  if(nickname.length<2){$("accountMessage").textContent="El nombre debe tener al menos 2 caracteres.";return}
- let saved=null;try{saved=JSON.parse(localStorage.getItem(accountStoreKey)||"null")}catch(err){}
- if(accountMode==="register"){
-  if(saved){$("accountMessage").textContent="Ya hay un perfil guardado aquí. Inicia sesión con ese nombre.";return}
-  try{localStorage.setItem(accountStoreKey,JSON.stringify({nickname,createdAt:new Date().toISOString()}))}
-  catch(err){$("accountMessage").textContent="No se pudo guardar el perfil en este navegador. Revisa el almacenamiento del navegador.";return}
- }else{
-  if(!saved||saved.nickname.toLowerCase()!==nickname.toLowerCase()){
-   $("accountMessage").textContent="No encuentro ese perfil en este navegador. Comprueba el nombre o regístrate.";
-   return;
+ if(password.length<6){$("accountMessage").textContent="La contraseña debe tener al menos 6 caracteres.";return}
+ $("accountSubmit").disabled=true;
+ $("accountMessage").textContent="Comprobando cuenta...";
+ try{
+  let saved=readAccount();
+  if(accountMode==="register"){
+   if(saved){$("accountMessage").textContent="Ya existe una cuenta en este navegador. Inicia sesión.";return}
+   const salt=newSalt();
+   const account={nickname,id:makeId(),salt,passwordHash:await passwordHash(password,salt),createdAt:new Date().toISOString()};
+   localStorage.setItem(accountStoreKey,JSON.stringify(account));
+   setSignedIn(account);
+  }else{
+   if(!saved||saved.nickname.toLowerCase()!==nickname.toLowerCase()){
+    $("accountMessage").textContent="No existe una cuenta con ese nombre en este navegador.";return;
+   }
+   // Actualiza perfiles antiguos que solo tenían nombre y aún no tenían contraseña.
+   if(!saved.passwordHash){
+    saved.salt=newSalt();
+    saved.passwordHash=await passwordHash(password,saved.salt);
+    saved.id=saved.id||makeId();
+    localStorage.setItem(accountStoreKey,JSON.stringify(saved));
+   }else{
+    const candidate=await passwordHash(password,saved.salt);
+    if(candidate!==saved.passwordHash){$("accountMessage").textContent="Contraseña incorrecta.";return}
+   }
+   setSignedIn(saved);
   }
- }
- $("accountGate").classList.remove("show");
- let badge=$("accountBadge");
- if(!badge){badge=document.createElement("div");badge.id="accountBadge";document.body.append(badge)}
- badge.textContent="Jugador: "+(accountMode==="login" && saved?.nickname ? saved.nickname : nickname);
+ }catch(err){$("accountMessage").textContent="No se pudo guardar o verificar la cuenta en este navegador."}
+ finally{$("accountSubmit").disabled=false}
 });
-
+$("modalContent").addEventListener("click",e=>{
+ if(e.target.id==="logout"){
+  sessionStorage.removeItem(activeSessionKey);
+  currentAccount=null;
+  $("accountBadge")?.remove();
+  $("overlay").classList.add("hidden");
+  $("accountGate").classList.add("show");
+  $("playerNick").value="";
+  $("playerPassword").value="";
+  accountModeSet("login");
+ }
+});
 choose(0);setTimeout(()=>{$("loading").style.opacity=0;setTimeout(()=>$("loading")?.remove(),180)},120);setTimeout(accountStart,350);
 </script>
 </body></html>
