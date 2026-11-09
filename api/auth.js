@@ -19,6 +19,12 @@ export default async function handler(req,res){
    const rows=await db("players",{method:"POST",body:JSON.stringify({id,nickname,salt:body.salt,password_hash:body.passwordHash})});
    const player=rows[0];return json(res,201,{token:token(player.id),user:{id:player.id,nickname:player.nickname}});
   }
+  if(action==="challenge"){
+   if(typeof body.nickname!=="string")return json(res,400,{error:"Nombre no válido."});
+   const rows=await db("players?select=salt,banned&nickname=ilike."+encodeURIComponent(body.nickname.trim()));
+   const player=rows[0];if(!player||player.banned)return json(res,404,{error:"No existe una cuenta activa con ese nombre."});
+   return json(res,200,{salt:player.salt});
+  }
   if(action==="login"){
    if(typeof body.nickname!=="string"||typeof body.passwordHash!=="string")return json(res,400,{error:"Datos no válidos."});
    const rows=await db("players?select=id,nickname,salt,password_hash,banned&nickname=ilike."+encodeURIComponent(body.nickname.trim()));
