@@ -53,7 +53,7 @@ $("registerTab").onclick=()=>accountModeSet("register");
 $("loginTab").onclick=()=>accountModeSet("login");
 $("accountForm").addEventListener("submit",e=>{
  e.preventDefault();
- const nickname=$("playerNick").value.trim().replace(/\\s+/g," ");
+ const nickname=$("playerNick").value.trim().replace(/\s+/g," ");
  if(nickname.length<2){$("accountMessage").textContent="El nombre debe tener al menos 2 caracteres.";return}
  let saved=null;try{saved=JSON.parse(localStorage.getItem(accountStoreKey)||"null")}catch(err){}
  if(accountMode==="register"){
@@ -70,7 +70,8 @@ $("accountForm").addEventListener("submit",e=>{
  if(!badge){badge=document.createElement("div");badge.id="accountBadge";document.body.append(badge)}
  badge.textContent="Jugador: "+saved?.nickname && accountMode==="login" ? "Jugador: "+saved.nickname : "Jugador: "+nickname;
 });
-\nchoose(0);setTimeout(()=>{$("loading").style.opacity=0;setTimeout(()=>$("loading").remove(),650)},1900);setTimeout(accountStart,2600);
+
+choose(0);setTimeout(()=>{$("loading").style.opacity=0;setTimeout(()=>$("loading").remove(),650)},1900);setTimeout(accountStart,2600);
 </script>
 <style>
 #accountGate{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 50% 20%,#263c5d 0,#090f20 65%);backdrop-filter:blur(8px)}
