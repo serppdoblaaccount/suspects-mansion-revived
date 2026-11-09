@@ -9,6 +9,39 @@
 <nav class="actions"><button class="purple" id="play">JUGAR <span>▶</span></button><button class="dark" id="custom">SALA PERSONALIZADA <span>🏠</span></button><button class="dark" id="pass">GAME PASS <span>⭐</span></button><button class="dark" id="shop">TIENDA <span>🛒</span></button><button class="dark" id="settings">AJUSTES <span>⚙️</span></button><button class="dark" id="scrollChars">PERSONAJES <span>🐾</span></button></nav></div>
 <section class="catalog" id="catalog"><div class="cataloghead"><h2>Personajes</h2><div class="filters" id="filters"><button class="active" data-f="Todos">Todos</button><button class="dark" data-f="Común">Comunes</button><button class="dark" data-f="Raro">Raros</button><button class="dark" data-f="Oro">Oro</button><button class="dark" data-f="Otros">Otros</button></div></div><div class="grid" id="grid"></div></section><div class="note">Proyecto fan-made no oficial · Multijugador y compras reales aún no conectados.</div></main></div>
 <div class="overlay hidden" id="overlay"><section class="modal"><button class="dark close" id="close">✕</button><div id="modalContent"></div></section></div>
+<style>
+#accountGate{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 50% 20%,#263c5d 0,#090f20 65%);backdrop-filter:blur(8px)}
+#accountGate.show{display:flex}
+.accountBox{width:min(440px,100%);padding:28px;border:1px solid #d8b36c;border-radius:18px;background:linear-gradient(145deg,#202c43,#101827);box-shadow:0 20px 70px #000b;text-align:center}
+.accountBox h2{margin:0 0 8px;font-size:28px;color:#ffe0a0}.accountBox p{color:#c6cfdf;line-height:1.5}
+.accountBox label{display:block;text-align:left;margin:14px 0 6px;color:#f1d8a4;font-weight:700}
+.accountBox input{display:block;width:100%;margin-top:6px;padding:13px;border-radius:9px;border:1px solid #59677e;background:#0b1322;color:#fff;font:inherit}
+.accountTabs{display:flex;gap:8px;margin:18px 0}.accountTabs button{flex:1}.accountTabs .selected{outline:2px solid #fff1c7}
+.accountActions{display:flex;gap:10px;margin-top:18px}.accountActions button{flex:1}
+.accountFine{font-size:12px!important;color:#9eabc0!important;margin-top:16px}
+#accountBadge{position:fixed;right:12px;top:12px;z-index:5;background:#17243cdd;border:1px solid #b99b62;border-radius:20px;padding:8px 12px;font-size:12px;color:#ffe0a0}
+</style>
+<div id="accountGate" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
+ <section class="accountBox">
+  <div style="font-size:12px;letter-spacing:3px;color:#d5b979">MANSION REVIVED</div>
+  <h2 id="accountTitle">¡Bienvenido a la mansión!</h2>
+  <p id="accountIntro">Crea tu perfil para entrar. Si ya tienes un perfil guardado en este navegador, inicia sesión.</p>
+  <div class="accountTabs">
+   <button type="button" class="selected" id="registerTab">Registrarse</button>
+   <button type="button" class="dark" id="loginTab">Iniciar sesión</button>
+  </div>
+  <form id="accountForm">
+   <label for="playerNick">Nombre de jugador</label>
+   <input id="playerNick" maxlength="18" minlength="2" autocomplete="nickname" placeholder="Tu nombre en el juego" required>
+   <div class="accountActions">
+    <button type="submit" class="purple" id="accountSubmit">Crear perfil</button>
+   </div>
+  </form>
+  <p class="accountFine">Versión de prueba: el perfil se guarda solo en este navegador. Todavía no existe una cuenta online ni recuperación de cuenta. No introduzcas contraseñas ni datos personales.</p>
+  <p id="accountMessage" aria-live="polite" style="min-height:20px;color:#ffd38b"></p>
+ </section>
+</div>
+
 <script>
 const C=[
 ["Nix","Zorro","Común","🦊"],["Betsy","Castor","Común","🦫"],["Duke","León","Común","🦁"],["Yara","Guacamayo jacinto","Común","🦜"],["Donna","Cocodrilo","Común","🐊"],["Jade","Tigre","Común","🐯"],["Fuzzy","Pingüino","Común","🐧"],["Chippy","Conejo","Común","🐰"],["Ollie","Panda","Común","🐼"],["Milo","Flamenco","Común","🦩"],["Louie","Rata","Común","🐀"],["Phil","Búho","Común","🦉"],
@@ -73,36 +106,4 @@ $("accountForm").addEventListener("submit",e=>{
 
 choose(0);setTimeout(()=>{$("loading").style.opacity=0;setTimeout(()=>$("loading").remove(),650)},1900);setTimeout(accountStart,2600);
 </script>
-<style>
-#accountGate{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 50% 20%,#263c5d 0,#090f20 65%);backdrop-filter:blur(8px)}
-#accountGate.show{display:flex}
-.accountBox{width:min(440px,100%);padding:28px;border:1px solid #d8b36c;border-radius:18px;background:linear-gradient(145deg,#202c43,#101827);box-shadow:0 20px 70px #000b;text-align:center}
-.accountBox h2{margin:0 0 8px;font-size:28px;color:#ffe0a0}.accountBox p{color:#c6cfdf;line-height:1.5}
-.accountBox label{display:block;text-align:left;margin:14px 0 6px;color:#f1d8a4;font-weight:700}
-.accountBox input{display:block;width:100%;margin-top:6px;padding:13px;border-radius:9px;border:1px solid #59677e;background:#0b1322;color:#fff;font:inherit}
-.accountTabs{display:flex;gap:8px;margin:18px 0}.accountTabs button{flex:1}.accountTabs .selected{outline:2px solid #fff1c7}
-.accountActions{display:flex;gap:10px;margin-top:18px}.accountActions button{flex:1}
-.accountFine{font-size:12px!important;color:#9eabc0!important;margin-top:16px}
-#accountBadge{position:fixed;right:12px;top:12px;z-index:5;background:#17243cdd;border:1px solid #b99b62;border-radius:20px;padding:8px 12px;font-size:12px;color:#ffe0a0}
-</style>
-<div id="accountGate" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
- <section class="accountBox">
-  <div style="font-size:12px;letter-spacing:3px;color:#d5b979">MANSION REVIVED</div>
-  <h2 id="accountTitle">¡Bienvenido a la mansión!</h2>
-  <p id="accountIntro">Crea tu perfil para entrar. Si ya tienes un perfil guardado en este navegador, inicia sesión.</p>
-  <div class="accountTabs">
-   <button type="button" class="selected" id="registerTab">Registrarse</button>
-   <button type="button" class="dark" id="loginTab">Iniciar sesión</button>
-  </div>
-  <form id="accountForm">
-   <label for="playerNick">Nombre de jugador</label>
-   <input id="playerNick" maxlength="18" minlength="2" autocomplete="nickname" placeholder="Tu nombre en el juego" required>
-   <div class="accountActions">
-    <button type="submit" class="purple" id="accountSubmit">Crear perfil</button>
-   </div>
-  </form>
-  <p class="accountFine">Versión de prueba: el perfil se guarda solo en este navegador. Todavía no existe una cuenta online ni recuperación de cuenta. No introduzcas contraseñas ni datos personales.</p>
-  <p id="accountMessage" aria-live="polite" style="min-height:20px;color:#ffd38b"></p>
- </section>
-</div>
 </body></html>
