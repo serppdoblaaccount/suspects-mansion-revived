@@ -114,10 +114,46 @@ function accountStart(){
   if(saved){setSignedIn(saved);return}
   $("accountGate").classList.add("show");
   accountModeSet("register");
- }catch(err){$("accountMessage").textContent="No se pudo guardar o verificar la cuenta en este navegador."}
- finally{$("accountSubmit").disabled=false}
-});
-$("modalContent").addEventListener("click",e=>{
+ }
+ $("registerTab").onclick=()=>accountModeSet("register");
+ $("loginTab").onclick=()=>accountModeSet("login");
+ $("accountForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const nickname=$("playerNick").value.trim().replace(/\\s+/g," ");
+  const password=$("playerPassword").value;
+  if(nickname.length<2){$("accountMessage").textContent="El nombre debe tener al menos 2 caracteres.";return}
+  if(password.length<6){$("accountMessage").textContent="La contraseña debe tener al menos 6 caracteres.";return}
+  $("accountSubmit").disabled=true;
+  $("accountMessage").textContent="Comprobando cuenta...";
+  try{
+   const accounts=readAccounts();
+   if(accountMode==="register"){
+    if(accounts.some(a=>a.nickname.toLowerCase()===nickname.toLowerCase())){
+     $("accountMessage").textContent="Ese nombre ya está registrado. Elige otro o inicia sesión.";return;
+    }
+    const salt=newSalt();
+    const account={nickname,id:makeId(),salt,passwordHash:await passwordHash(password,salt),createdAt:new Date().toISOString()};
+    accounts.push(account);
+    saveAccounts(accounts);
+    setSignedIn(account);
+   }else{
+    const saved=accounts.find(a=>a.nickname.toLowerCase()===nickname.toLowerCase());
+    if(!saved){$("accountMessage").textContent="No existe una cuenta con ese nombre en este navegador.";return}
+    if(!saved.passwordHash){
+     saved.salt=newSalt();
+     saved.passwordHash=await passwordHash(password,saved.salt);
+     saved.id=saved.id||makeId();
+     saveAccounts(accounts);
+    }else{
+     const candidate=await passwordHash(password,saved.salt);
+     if(candidate!==saved.passwordHash){$("accountMessage").textContent="Contraseña incorrecta.";return}
+    }
+    setSignedIn(saved);
+   }
+  }catch(err){$("accountMessage").textContent="No se pudo guardar o verificar la cuenta en este navegador."}
+  finally{$("accountSubmit").disabled=false}
+ });
+ $("modalContent").addEventListener("click",e=>{
  if(e.target.id==="logout"){
   sessionStorage.removeItem(activeSessionKey);
   currentAccount=null;
