@@ -26,5 +26,82 @@ $("pass").onclick=()=>modal('<h2>⭐ Game Pass</h2><p>Ruta de recompensas de tem
 $("shop").onclick=()=>modal('<h2>🛒 Tienda</h2><p>Objetos de muestra; no hay compras reales.</p><div class="shop"><div class="item">🎩<b>Sombrero</b><p>250 monedas</p></div><div class="item">✨<b>Efecto brillante</b><p>400 monedas</p></div><div class="item">🧥<b>Traje misterioso</b><p>600 monedas</p></div></div>');
 $("settings").onclick=()=>modal('<h2>⚙️ Ajustes</h2><p>Música　<input type="checkbox" checked></p><p>Efectos de sonido　<input type="checkbox" checked></p><p>Idioma　<select><option>Español</option><option>English</option></select></p><p>Calidad gráfica　<select><option>Alta</option><option>Media</option><option>Baja</option></select></p><small>Los ajustes son visuales y todavía no se guardan.</small>');
 $("modalContent").onclick=e=>{if(e.target.id==="openDemo")location.href="demo-0.1.html";if(e.target.id==="create"||e.target.id==="join")$("roomMsg").textContent="Aún no está conectado el servidor multijugador; no se ha creado ni unido ninguna sala.";if(e.target.id==="claim"){e.target.textContent="Recompensa de prueba reclamada";e.target.disabled=true}};
-choose(0);setTimeout(()=>{$("loading").style.opacity=0;setTimeout(()=>$("loading").remove(),650)},1900);
-</script></body></html>
+
+let accountMode="register";
+const accountStoreKey="mansionRevivedProfileV1";
+function accountModeSet(mode){
+ accountMode=mode;
+ $("registerTab").classList.toggle("selected",mode==="register");
+ $("loginTab").classList.toggle("selected",mode==="login");
+ $("registerTab").classList.toggle("dark",mode!=="register");
+ $("loginTab").classList.toggle("dark",mode!=="login");
+ $("accountSubmit").textContent=mode==="register"?"Crear perfil":"Entrar";
+ $("accountTitle").textContent=mode==="register"?"¡Bienvenido a la mansión!":"Qué bueno verte de nuevo";
+ $("accountIntro").textContent=mode==="register"?"Crea tu perfil para entrar.":"Escribe el nombre del perfil que guardaste en este navegador.";
+ $("accountMessage").textContent="";
+}
+function accountStart(){
+ let saved=null;
+ try{saved=JSON.parse(localStorage.getItem(accountStoreKey)||"null")}catch(e){}
+ if(saved&&saved.nickname){
+  const badge=document.createElement("div");badge.id="accountBadge";badge.textContent="Jugador: "+saved.nickname;document.body.append(badge);
+  return;
+ }
+ $("accountGate").classList.add("show");
+}
+$("registerTab").onclick=()=>accountModeSet("register");
+$("loginTab").onclick=()=>accountModeSet("login");
+$("accountForm").addEventListener("submit",e=>{
+ e.preventDefault();
+ const nickname=$("playerNick").value.trim().replace(/\\s+/g," ");
+ if(nickname.length<2){$("accountMessage").textContent="El nombre debe tener al menos 2 caracteres.";return}
+ let saved=null;try{saved=JSON.parse(localStorage.getItem(accountStoreKey)||"null")}catch(err){}
+ if(accountMode==="register"){
+  if(saved){$("accountMessage").textContent="Ya hay un perfil guardado aquí. Inicia sesión con ese nombre.";return}
+  localStorage.setItem(accountStoreKey,JSON.stringify({nickname,createdAt:new Date().toISOString()}));
+ }else{
+  if(!saved||saved.nickname.toLowerCase()!==nickname.toLowerCase()){
+   $("accountMessage").textContent="No encuentro ese perfil en este navegador. Comprueba el nombre o regístrate.";
+   return;
+  }
+ }
+ $("accountGate").classList.remove("show");
+ let badge=$("accountBadge");
+ if(!badge){badge=document.createElement("div");badge.id="accountBadge";document.body.append(badge)}
+ badge.textContent="Jugador: "+saved?.nickname && accountMode==="login" ? "Jugador: "+saved.nickname : "Jugador: "+nickname;
+});
+\nchoose(0);setTimeout(()=>{$("loading").style.opacity=0;setTimeout(()=>$("loading").remove(),650)},1900);setTimeout(accountStart,2600);
+</script>
+<style>
+#accountGate{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 50% 20%,#263c5d 0,#090f20 65%);backdrop-filter:blur(8px)}
+#accountGate.show{display:flex}
+.accountBox{width:min(440px,100%);padding:28px;border:1px solid #d8b36c;border-radius:18px;background:linear-gradient(145deg,#202c43,#101827);box-shadow:0 20px 70px #000b;text-align:center}
+.accountBox h2{margin:0 0 8px;font-size:28px;color:#ffe0a0}.accountBox p{color:#c6cfdf;line-height:1.5}
+.accountBox label{display:block;text-align:left;margin:14px 0 6px;color:#f1d8a4;font-weight:700}
+.accountBox input{display:block;width:100%;margin-top:6px;padding:13px;border-radius:9px;border:1px solid #59677e;background:#0b1322;color:#fff;font:inherit}
+.accountTabs{display:flex;gap:8px;margin:18px 0}.accountTabs button{flex:1}.accountTabs .selected{outline:2px solid #fff1c7}
+.accountActions{display:flex;gap:10px;margin-top:18px}.accountActions button{flex:1}
+.accountFine{font-size:12px!important;color:#9eabc0!important;margin-top:16px}
+#accountBadge{position:fixed;right:12px;top:12px;z-index:5;background:#17243cdd;border:1px solid #b99b62;border-radius:20px;padding:8px 12px;font-size:12px;color:#ffe0a0}
+</style>
+<div id="accountGate" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
+ <section class="accountBox">
+  <div style="font-size:12px;letter-spacing:3px;color:#d5b979">MANSION REVIVED</div>
+  <h2 id="accountTitle">¡Bienvenido a la mansión!</h2>
+  <p id="accountIntro">Crea tu perfil para entrar. Si ya tienes un perfil guardado en este navegador, inicia sesión.</p>
+  <div class="accountTabs">
+   <button type="button" class="selected" id="registerTab">Registrarse</button>
+   <button type="button" class="dark" id="loginTab">Iniciar sesión</button>
+  </div>
+  <form id="accountForm">
+   <label for="playerNick">Nombre de jugador</label>
+   <input id="playerNick" maxlength="18" minlength="2" autocomplete="nickname" placeholder="Tu nombre en el juego" required>
+   <div class="accountActions">
+    <button type="submit" class="purple" id="accountSubmit">Crear perfil</button>
+   </div>
+  </form>
+  <p class="accountFine">Versión de prueba: el perfil se guarda solo en este navegador. Todavía no existe una cuenta online ni recuperación de cuenta. No introduzcas contraseñas ni datos personales.</p>
+  <p id="accountMessage" aria-live="polite" style="min-height:20px;color:#ffd38b"></p>
+ </section>
+</div>
+</body></html>
