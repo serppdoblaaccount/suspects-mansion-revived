@@ -94,7 +94,8 @@ $("accountForm").addEventListener("submit",e=>{
  let saved=null;try{saved=JSON.parse(localStorage.getItem(accountStoreKey)||"null")}catch(err){}
  if(accountMode==="register"){
   if(saved){$("accountMessage").textContent="Ya hay un perfil guardado aquí. Inicia sesión con ese nombre.";return}
-  localStorage.setItem(accountStoreKey,JSON.stringify({nickname,createdAt:new Date().toISOString()}));
+  try{localStorage.setItem(accountStoreKey,JSON.stringify({nickname,createdAt:new Date().toISOString()}))}
+  catch(err){$("accountMessage").textContent="No se pudo guardar el perfil en este navegador. Revisa el almacenamiento del navegador.";return}
  }else{
   if(!saved||saved.nickname.toLowerCase()!==nickname.toLowerCase()){
    $("accountMessage").textContent="No encuentro ese perfil en este navegador. Comprueba el nombre o regístrate.";
