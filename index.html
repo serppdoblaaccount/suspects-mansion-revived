@@ -54,7 +54,7 @@ function choose(i){sel=(i+C.length)%C.length;let c=C[sel];$("avatar").textConten
 function draw(){let g=$("grid");g.innerHTML="";C.forEach((c,i)=>{if(filter!=="Todos"&&filter!==c[2])return;let b=document.createElement("button");b.className="card"+(i===sel?" sel":"");b.innerHTML="<i></i><b></b><small></small>";b.querySelector("i").textContent=c[3];b.querySelector("b").textContent=c[0];b.querySelector("small").textContent=c[2];b.onclick=()=>choose(i);g.append(b)})}
 function modal(s){$("modalContent").innerHTML=s;$("overlay").classList.remove("hidden")}
 $("prev").onclick=()=>choose(sel-1);$("next").onclick=()=>choose(sel+1);$("close").onclick=()=>$("overlay").classList.add("hidden");$("scrollChars").onclick=()=>$("catalog").scrollIntoView({behavior:"smooth"});
-$("filters").onclick=e=>{let b=e.target.closest("[data-f]");if(!b)return;filter=b.dataset.f;document.querySelectorAll("[data-f]").forEach(x=>x.classList.toggle("active",x===b));draw()};
+/* Los filtros se retiraron temporalmente: solo hay 4 personajes disponibles. */
 $("play").onclick=()=>modal('<h2>Jugar</h2><p>Elige tu forma de entrar en la mansión.</p><div class="shop"><div class="item"><b>🎮 Partida rápida</b><p>Buscar partida pública.</p><small>El servidor multijugador aún no está conectado.</small></div><div class="item"><b>🕵️ Entrenamiento</b><p>Prueba la demo original.</p><small>Partida local de la versión 0.1.</small></div></div><p><button class="purple" id="openDemo">Abrir demo local</button></p>');
 $("custom").onclick=()=>modal('<h2>Sala personalizada</h2><p>Crea una sala privada o introduce un código de invitación.</p><label>Nombre de sala<input id="roomName" placeholder="Mi mansión" maxlength="20"></label><label>Código de sala<input id="roomCode" placeholder="ABC123" maxlength="6"></label><button class="purple" id="create">Crear sala</button> <button class="dark" id="join">Entrar con código</button><p id="roomMsg">Interfaz preparada; aún falta conectar el servidor online. No se creará una sala real.</p>');
 $("pass").onclick=()=>modal('<h2>⭐ Game Pass</h2><p>Ruta de recompensas de temporada, inspirada en el pase dorado. Esta maqueta no procesa pagos.</p><div class="bar"><i style="width:12%"></i></div><p><b>Nivel 1:</b> recompensa de bienvenida (vista previa).</p><button class="purple" id="claim">Reclamar recompensa de prueba</button>');
@@ -103,7 +103,7 @@ $("accountForm").addEventListener("submit",e=>{
  $("accountGate").classList.remove("show");
  let badge=$("accountBadge");
  if(!badge){badge=document.createElement("div");badge.id="accountBadge";document.body.append(badge)}
- badge.textContent="Jugador: "+saved?.nickname && accountMode==="login" ? "Jugador: "+saved.nickname : "Jugador: "+nickname;
+ badge.textContent="Jugador: "+(accountMode==="login" && saved?.nickname ? saved.nickname : nickname);
 });
 
 choose(0);setTimeout(()=>{$("loading").style.opacity=0;setTimeout(()=>$("loading").remove(),280)},500);setTimeout(accountStart,850);
