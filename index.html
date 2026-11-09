@@ -78,7 +78,16 @@ async function passwordHash(password,salt){
  return btoa(String.fromCharCode(...new Uint8Array(bits)));
 }
 function newSalt(){const bytes=crypto.getRandomValues(new Uint8Array(16));return btoa(String.fromCharCode(...bytes))}
-function readAccount(){try{return JSON.parse(localStorage.getItem(accountStoreKey)||"null")}catch(e){return null}}
+function readAccounts(){
+ try{
+  const raw=JSON.parse(localStorage.getItem(accountStoreKey)||"[]");
+  const list=Array.isArray(raw)?raw:(raw&&raw.nickname?[raw]:[]);
+  if(!Array.isArray(raw)&&list.length)localStorage.setItem(accountStoreKey,JSON.stringify(list));
+  return list;
+ }catch(e){return []}
+}
+function saveAccounts(accounts){localStorage.setItem(accountStoreKey,JSON.stringify(accounts))}
+function findAccountById(id){return readAccounts().find(a=>a.id===id)||null}
 function setSignedIn(account){
  currentAccount=account;
  sessionStorage.setItem(activeSessionKey,account.id);
@@ -100,46 +109,11 @@ function accountModeSet(mode){
  $("accountMessage").textContent="";
 }
 function accountStart(){
- const saved=readAccount();
- let active=null;try{active=sessionStorage.getItem(activeSessionKey)}catch(e){}
- if(saved&&active===saved.id){setSignedIn(saved);return}
- $("accountGate").classList.add("show");
- accountModeSet(saved?"login":"register");
-}
-$("registerTab").onclick=()=>accountModeSet("register");
-$("loginTab").onclick=()=>accountModeSet("login");
-$("accountForm").addEventListener("submit",async e=>{
- e.preventDefault();
- const nickname=$("playerNick").value.trim().replace(/\s+/g," ");
- const password=$("playerPassword").value;
- if(nickname.length<2){$("accountMessage").textContent="El nombre debe tener al menos 2 caracteres.";return}
- if(password.length<6){$("accountMessage").textContent="La contraseña debe tener al menos 6 caracteres.";return}
- $("accountSubmit").disabled=true;
- $("accountMessage").textContent="Comprobando cuenta...";
- try{
-  let saved=readAccount();
-  if(accountMode==="register"){
-   if(saved){$("accountMessage").textContent="Ya existe una cuenta en este navegador. Inicia sesión.";return}
-   const salt=newSalt();
-   const account={nickname,id:makeId(),salt,passwordHash:await passwordHash(password,salt),createdAt:new Date().toISOString()};
-   localStorage.setItem(accountStoreKey,JSON.stringify(account));
-   setSignedIn(account);
-  }else{
-   if(!saved||saved.nickname.toLowerCase()!==nickname.toLowerCase()){
-    $("accountMessage").textContent="No existe una cuenta con ese nombre en este navegador.";return;
-   }
-   // Actualiza perfiles antiguos que solo tenían nombre y aún no tenían contraseña.
-   if(!saved.passwordHash){
-    saved.salt=newSalt();
-    saved.passwordHash=await passwordHash(password,saved.salt);
-    saved.id=saved.id||makeId();
-    localStorage.setItem(accountStoreKey,JSON.stringify(saved));
-   }else{
-    const candidate=await passwordHash(password,saved.salt);
-    if(candidate!==saved.passwordHash){$("accountMessage").textContent="Contraseña incorrecta.";return}
-   }
-   setSignedIn(saved);
-  }
+  let active=null;try{active=sessionStorage.getItem(activeSessionKey)}catch(e){}
+  const saved=active?findAccountById(active):null;
+  if(saved){setSignedIn(saved);return}
+  $("accountGate").classList.add("show");
+  accountModeSet("register");
  }catch(err){$("accountMessage").textContent="No se pudo guardar o verificar la cuenta en este navegador."}
  finally{$("accountSubmit").disabled=false}
 });
