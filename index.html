@@ -39,7 +39,7 @@
     <button type="submit" class="purple" id="accountSubmit">Crear perfil</button>
    </div>
   </form>
-  <p class="accountFine">Cuenta local de prueba: tus datos se guardan solo en este navegador. La cuenta no funciona todavía entre dispositivos y no tiene recuperación de contraseña.</p>
+  <p class="accountFine">Cuenta online: podrás iniciar sesión desde otros dispositivos. No compartas tu contraseña.</p>
   <p id="accountMessage" aria-live="polite" style="min-height:20px;color:#ffd38b"></p>
  </section>
 </div>
@@ -64,7 +64,7 @@ $("pass").onclick=()=>modal('<h2>⭐ Game Pass</h2><p>Ruta de recompensas de tem
 $("shop").onclick=()=>modal('<h2>🛒 Tienda</h2><p>Objetos de muestra; no hay compras reales.</p><div class="shop"><div class="item">🎩<b>Sombrero</b><p>250 monedas</p></div><div class="item">✨<b>Efecto brillante</b><p>400 monedas</p></div><div class="item">🧥<b>Traje misterioso</b><p>600 monedas</p></div></div>');
 $("settings").onclick=()=>{
  let adminButton=currentAccount?.id==="SMR-FAC1C675-EF34-4222-82CB-2B793990D78F"?'<button class="purple" id="openAdmin">🛡️ ADMIN PANEL</button>':'';
- modal('<h2>⚙️ Ajustes</h2><h3>Mi cuenta</h3><p>Jugador: <b>'+escapeHTML(currentAccount?.nickname||"—")+'</b></p><p style="overflow-wrap:anywhere">ID de usuario: <code>'+escapeHTML(currentAccount?.id||"—")+'</code></p>'+adminButton+'<button class="dark" id="logout">Cerrar sesión</button><hr><p>Música　<input type="checkbox" checked></p><p>Efectos de sonido　<input type="checkbox" checked></p><p>Idioma　<select><option>Español</option><option>English</option></select></p><p>Calidad gráfica　<select><option>Alta</option><option>Media</option><option>Baja</option></select></p><small>Cuenta local: este ID identifica tu perfil en este navegador. Aún no hay cuentas online.</small>');
+ modal('<h2>⚙️ Ajustes</h2><h3>Mi cuenta</h3><p>Jugador: <b>'+escapeHTML(currentAccount?.nickname||"—")+'</b></p><p style="overflow-wrap:anywhere">ID de usuario: <code>'+escapeHTML(currentAccount?.id||"—")+'</code></p>'+adminButton+'<button class="dark" id="logout">Cerrar sesión</button><hr><p>Música　<input type="checkbox" checked></p><p>Efectos de sonido　<input type="checkbox" checked></p><p>Idioma　<select><option>Español</option><option>English</option></select></p><p>Calidad gráfica　<select><option>Alta</option><option>Media</option><option>Baja</option></select></p><small>Cuenta online protegida por el servidor.</small>');
 };
 $("modalContent").onclick=e=>{
  if(e.target.id==="openAdmin"){
@@ -79,10 +79,19 @@ $("modalContent").onclick=e=>{
 
 let accountMode="register";
 let currentAccount=null;
-const accountStoreKey="mansionRevivedProfileV1";
 const activeSessionKey="mansionRevivedSessionV1";
-const makeId=()=>("SMR-"+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+"-"+Math.random().toString(36).slice(2))).toUpperCase();
+const tokenKey="mansionRevivedTokenV1";
+const userKey="mansionRevivedUserV1";
 const escapeHTML=v=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function api(path,options={}){
+ const token=sessionStorage.getItem(tokenKey);
+ const headers={"Content-Type":"application/json",...(options.headers||{})};
+ if(token)headers.Authorization="Bearer "+token;
+ const r=await fetch(path,{...options,headers});
+ const data=await r.json().catch(()=>({error:"Respuesta no válida del servidor."}));
+ if(!r.ok)throw new Error(data.error||"No se pudo completar la solicitud.");
+ return data;
+}
 async function passwordHash(password,salt){
  const enc=new TextEncoder();
  const key=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveBits"]);
@@ -90,23 +99,15 @@ async function passwordHash(password,salt){
  return btoa(String.fromCharCode(...new Uint8Array(bits)));
 }
 function newSalt(){const bytes=crypto.getRandomValues(new Uint8Array(16));return btoa(String.fromCharCode(...bytes))}
-function readAccounts(){
- try{
-  const raw=JSON.parse(localStorage.getItem(accountStoreKey)||"[]");
-  const list=Array.isArray(raw)?raw:(raw&&raw.nickname?[raw]:[]);
-  if(!Array.isArray(raw)&&list.length)localStorage.setItem(accountStoreKey,JSON.stringify(list));
-  return list;
- }catch(e){return []}
-}
-function saveAccounts(accounts){localStorage.setItem(accountStoreKey,JSON.stringify(accounts))}
-function findAccountById(id){return readAccounts().find(a=>a.id===id)||null}
-function setSignedIn(account){
- currentAccount=account;
- sessionStorage.setItem(activeSessionKey,account.id);
+function setSignedIn(user,authToken){
+ currentAccount=user;
+ sessionStorage.setItem(activeSessionKey,user.id);
+ sessionStorage.setItem(tokenKey,authToken);
+ sessionStorage.setItem(userKey,JSON.stringify(user));
  $("accountGate").classList.remove("show");
  let badge=$("accountBadge");
  if(!badge){badge=document.createElement("div");badge.id="accountBadge";document.body.append(badge)}
- badge.textContent="Jugador: "+account.nickname;
+ badge.textContent="Jugador: "+user.nickname;
 }
 function accountModeSet(mode){
  accountMode=mode;
@@ -114,67 +115,78 @@ function accountModeSet(mode){
  $("loginTab").classList.toggle("selected",mode==="login");
  $("registerTab").classList.toggle("dark",mode!=="register");
  $("loginTab").classList.toggle("dark",mode!=="login");
- $("accountSubmit").textContent=mode==="register"?"Crear cuenta":"Iniciar sesión";
- $("accountTitle").textContent=mode==="register"?"Crear cuenta":"Iniciar sesión";
- $("accountIntro").textContent=mode==="register"?"Elige un nombre y una contraseña para crear tu cuenta.":"Introduce el nombre y la contraseña de tu cuenta.";
- $("playerPassword").autocomplete=mode==="register"?"new-password":"current-password";
+ let boot=document.getElementById("adminSetupTab");
+ if(!boot){boot=document.createElement("button");boot.type="button";boot.id="adminSetupTab";boot.className="dark";boot.textContent="Configurar admin";$("registerTab").parentElement.append(boot);boot.onclick=()=>accountModeSet("bootstrap")}
+ boot.classList.toggle("selected",mode==="bootstrap");
+ $("accountSubmit").textContent=mode==="register"?"Crear cuenta":mode==="login"?"Iniciar sesión":"Crear cuenta admin";
+ $("accountTitle").textContent=mode==="register"?"Crear cuenta":mode==="login"?"Iniciar sesión":"Configurar administrador";
+ $("accountIntro").textContent=mode==="register"?"Crea tu cuenta online para jugar desde cualquier dispositivo.":mode==="login"?"Inicia sesión en tu cuenta online.":"Usa el código privado de configuración que has guardado en Vercel.";
+ $("playerPassword").autocomplete=mode==="register"||mode==="bootstrap"?"new-password":"current-password";
+ let setup=document.getElementById("adminSetupToken");
+ if(mode==="bootstrap"&&!setup){setup=document.createElement("input");setup.id="adminSetupToken";setup.type="password";setup.placeholder="Código privado de configuración";setup.autocomplete="off";setup.required=true;setup.setAttribute("aria-label","Código privado de configuración");$("accountForm").insertBefore(setup,$("accountSubmit").parentElement)}
+ if(setup){setup.classList.toggle("hidden",mode!=="bootstrap");setup.required=mode==="bootstrap"}
  $("accountMessage").textContent="";
 }
 function accountStart(){
-  let active=null;try{active=sessionStorage.getItem(activeSessionKey)}catch(e){}
-  const saved=active?findAccountById(active):null;
-  if(saved){setSignedIn(saved);return}
-  $("accountGate").classList.add("show");
-  accountModeSet("register");
+ try{
+  const user=JSON.parse(sessionStorage.getItem(userKey)||"null");
+  const token=sessionStorage.getItem(tokenKey);
+  if(user&&token&&user.id===sessionStorage.getItem(activeSessionKey)){setSignedIn(user,token);return}
+ }catch(e){}
+ $("accountGate").classList.add("show");
+ accountModeSet("register");
+}
+$("registerTab").onclick=()=>accountModeSet("register");
+$("loginTab").onclick=()=>accountModeSet("login");
+$("accountForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const nickname=$("playerNick").value.trim().replace(/\s+/g," ");
+ const password=$("playerPassword").value;
+ if(nickname.length<2){$("accountMessage").textContent="El nombre debe tener al menos 2 caracteres.";return}
+ if(password.length<6){$("accountMessage").textContent="La contraseña debe tener al menos 6 caracteres.";return}
+ $("accountSubmit").disabled=true;$("accountMessage").textContent="Conectando con la mansión...";
+ try{
+  let result;
+  if(accountMode==="login"){
+   const challenge=await api("/api/auth",{method:"POST",body:JSON.stringify({action:"challenge",nickname})});
+   const hash=await passwordHash(password,challenge.salt);
+   result=await api("/api/auth",{method:"POST",body:JSON.stringify({action:"login",nickname,passwordHash:hash})});
+  }else{
+   const salt=newSalt(),hash=await passwordHash(password,salt);
+   const payload={action:accountMode==="bootstrap"?"bootstrap":"register",nickname,salt,passwordHash:hash};
+   if(accountMode==="bootstrap")payload.setupToken=$("adminSetupToken")?.value||"";
+   result=await api("/api/auth",{method:"POST",body:JSON.stringify(payload)});
+  }
+  setSignedIn(result.user,result.token);
+ }catch(err){$("accountMessage").textContent=err.message||"No se pudo conectar con el servidor."}
+ finally{$("accountSubmit").disabled=false}
+});
+$("modalContent").onclick=async e=>{
+ if(e.target.id==="openAdmin"){
+  if(currentAccount?.id!=="SMR-FAC1C675-EF34-4222-82CB-2B793990D78F")return;
+  modal('<h2>🛡️ Panel de administración SMR</h2><p>Cargando cuentas online...</p>');
+  try{await renderAdminPanel()}catch(err){modal('<h2>🛡️ Panel de administración</h2><p>'+escapeHTML(err.message)+'</p>')}
  }
- $("registerTab").onclick=()=>accountModeSet("register");
- $("loginTab").onclick=()=>accountModeSet("login");
- $("accountForm").addEventListener("submit",async e=>{
-  e.preventDefault();
-  const nickname=$("playerNick").value.trim().replace(/\\s+/g," ");
-  const password=$("playerPassword").value;
-  if(nickname.length<2){$("accountMessage").textContent="El nombre debe tener al menos 2 caracteres.";return}
-  if(password.length<6){$("accountMessage").textContent="La contraseña debe tener al menos 6 caracteres.";return}
-  $("accountSubmit").disabled=true;
-  $("accountMessage").textContent="Comprobando cuenta...";
-  try{
-   const accounts=readAccounts();
-   if(accountMode==="register"){
-    if(accounts.some(a=>a.nickname.toLowerCase()===nickname.toLowerCase())){
-     $("accountMessage").textContent="Ese nombre ya está registrado. Elige otro o inicia sesión.";return;
-    }
-    const salt=newSalt();
-    const account={nickname,id:makeId(),salt,passwordHash:await passwordHash(password,salt),createdAt:new Date().toISOString()};
-    accounts.push(account);
-    saveAccounts(accounts);
-    setSignedIn(account);
-   }else{
-    const saved=accounts.find(a=>a.nickname.toLowerCase()===nickname.toLowerCase());
-    if(!saved){$("accountMessage").textContent="No existe una cuenta con ese nombre en este navegador.";return}
-    if(!saved.passwordHash){
-     saved.salt=newSalt();
-     saved.passwordHash=await passwordHash(password,saved.salt);
-     saved.id=saved.id||makeId();
-     saveAccounts(accounts);
-    }else{
-     const candidate=await passwordHash(password,saved.salt);
-     if(candidate!==saved.passwordHash){$("accountMessage").textContent="Contraseña incorrecta.";return}
-    }
-    setSignedIn(saved);
-   }
-  }catch(err){$("accountMessage").textContent="No se pudo guardar o verificar la cuenta en este navegador."}
-  finally{$("accountSubmit").disabled=false}
- });
- $("modalContent").addEventListener("click",e=>{
+ if(e.target.matches("[data-ban-user]")){
+  const userId=e.target.getAttribute("data-userid");
+  const banned=e.target.getAttribute("data-banned")==="true";
+  try{await api("/api/admin",{method:"PATCH",body:JSON.stringify({userId,banned:!banned})});await renderAdminPanel()}
+  catch(err){alert(err.message)}
+ }
+ if(e.target.id==="openDemo")location.href="demo-0.1.html";
+ if(e.target.id==="create"||e.target.id==="join")$("roomMsg").textContent="Aún no está conectado el servidor multijugador; no se ha creado ni unido ninguna sala.";
+ if(e.target.id==="claim"){e.target.textContent="Recompensa de prueba reclamada";e.target.disabled=true}
+};
+async function renderAdminPanel(){
+ const data=await api("/api/admin");
+ const rows=data.users.map(u=>'<div class="item" style="text-align:left;margin:8px 0"><b>'+escapeHTML(u.nickname)+'</b> '+(u.isAdmin?'🛡️':'')+'<br><small>'+escapeHTML(u.id)+'</small><br><small>'+ (u.banned?'Bloqueado':'Activo') +'</small>'+(u.isAdmin?'':'<p><button class="dark" data-ban-user data-userid="'+escapeHTML(u.id)+'" data-banned="'+u.banned+'">'+(u.banned?'Desbloquear':'Bloquear')+'</button></p>')+'</div>').join("");
+ modal('<h2>🛡️ Panel de administración SMR</h2><p>Usuarios registrados: <b>'+data.users.length+'</b></p><div style="max-height:55vh;overflow:auto">'+(rows||'<p>No hay usuarios registrados.</p>')+'</div>');
+}
+$("modalContent").addEventListener("click",e=>{
  if(e.target.id==="logout"){
-  sessionStorage.removeItem(activeSessionKey);
-  currentAccount=null;
-  $("accountBadge")?.remove();
-  $("overlay").classList.add("hidden");
-  $("accountGate").classList.add("show");
-  $("playerNick").value="";
-  $("playerPassword").value="";
-  accountModeSet("login");
+  sessionStorage.removeItem(activeSessionKey);sessionStorage.removeItem(tokenKey);sessionStorage.removeItem(userKey);
+  currentAccount=null;$("accountBadge")?.remove();$("overlay").classList.add("hidden");$("accountGate").classList.add("show");
+  $("playerNick").value="";$("playerPassword").value="";accountModeSet("login");
  }
 });
 choose(0);setTimeout(()=>{$("loading").style.opacity=0;setTimeout(()=>$("loading")?.remove(),180)},120);setTimeout(accountStart,350);
