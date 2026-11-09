@@ -1,0 +1,13 @@
+{
+  "name": "suspects-mansion-revived",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Fan-made browser mystery game and testable private-room core.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
