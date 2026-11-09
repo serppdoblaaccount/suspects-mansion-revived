@@ -6,7 +6,8 @@ Juego fan-made para navegador inspirado en los juegos de misterio social.
 
 - **Demo 0.1:** juego individual en `index.html`, con mapa, movimiento, tres pistas y temporizador.
 - **Base 0.2:** núcleo de salas privadas en memoria, separado del transporte de red y cubierto por pruebas automatizadas.
-- **Multijugador online:** todavía no disponible. Aún no hay servidor WebSocket, conexión desde el navegador, identidad de jugador ni despliegue de backend.
+- **Cuentas online:** API preparada para Supabase y Vercel; necesita configurar las variables de entorno y ejecutar el SQL.
+- **Admin Panel:** lista cuentas online y permite bloquear/desbloquear jugadores. El servidor verifica el ID administrador.
 
 ## Estructura
 
@@ -15,7 +16,7 @@ Juego fan-made para navegador inspirado en los juegos de misterio social.
 - `test/room-manager.test.mjs` — pruebas del ciclo de vida de las salas.
 - `docs/multiplayer-architecture.md` — propuesta de arquitectura, eventos y próximos pasos.
 
-## Ejecutar las pruebas
+## Configurar cuentas online\n\nSigue `docs/online-accounts-setup.md`. Hasta configurar Supabase y las variables de Vercel, el registro online no funcionará.\n\n## Ejecutar las pruebas
 
 Requiere Node.js 20 o superior. No hay dependencias externas:
 
