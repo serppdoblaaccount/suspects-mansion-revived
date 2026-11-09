@@ -16,7 +16,7 @@ Añade estas variables para Production (y Preview si quieres probar):
 Después de guardar las variables, redepliega el proyecto.
 
 ## 3. Crear la cuenta administradora
-La primera cuenta debe registrarse mediante la acción `bootstrap` de `/api/auth`, usando el `ADMIN_SETUP_TOKEN` y el ID fijado en `ADMIN_USER_ID`. El cliente del juego debe enviar el nombre, la sal y el hash PBKDF2 de la contraseña. Una vez creada, elimina `ADMIN_SETUP_TOKEN` de Vercel y vuelve a desplegar.
+Abre el juego, pulsa **Configurar admin** en la pantalla de cuenta, introduce tu nombre, una contraseña y el mismo código que guardaste como `ADMIN_SETUP_TOKEN` en Vercel. El juego crea la cuenta con el ID fijo `ADMIN_USER_ID`. Después, elimina `ADMIN_SETUP_TOKEN` de Vercel y vuelve a desplegar. En los siguientes accesos, usa **Iniciar sesión**.
 
 ## Seguridad
 - La clave service_role nunca se envía al navegador.
