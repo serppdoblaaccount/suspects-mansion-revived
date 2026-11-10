@@ -37,7 +37,7 @@ Por tanto, hay una API de cuentas, pero **todavía no hay backend multijugador e
 - bloqueo del inicio si el host está desconectado o quedan menos de dos jugadores conectados;
 - un contador `revision` que aumenta cuando cambia el estado de la sala.
 
-Las nueve pruebas de `test/room-manager.test.mjs` cubren creación, entrada, límites, inicio, salida, caducidad, reconexión, expiración de reconexión y revisiones. Ejecutar con Node.js 20 o superior:
+Las diez pruebas de `test/room-manager.test.mjs` cubren creación, entrada, límites, inicio, salida, caducidad, reconexión, expiración de reconexión y revisiones. Ejecutar con Node.js 20 o superior:
 
 ```bash
 npm test
