@@ -1,42 +1,55 @@
-# Multiplayer architecture proposal
+# Salas privadas y sincronización multijugador
 
-## Current baseline
+Estado revisado: 10 de noviembre de 2026.
 
-The repository currently contains a single static `index.html` demo (version 0.1). It has no package manifest, server, database, WebSocket endpoint, player identity service, or deployment configuration. The browser demo is local-only: each visitor runs an independent game. A room code shown by the page would not connect players, so this proposal does not claim that online play exists.
+## Punto de partida real
 
-## Recommended architecture
+- `demo-0.1.html` conserva la demo local jugable original.
+- `index.html` contiene el menú actual, el acceso a cuentas y una maqueta de sala. Sus botones de crear/unirse indican expresamente que no hay servidor conectado.
+- `api/auth.js` ya implementa registro, desafío de contraseña, inicio de sesión y configuración inicial de admin. Firma tokens HMAC con vencimiento de 14 días usando `AUTH_TOKEN_SECRET`.
+- `api/admin.js` expone el panel protegido de administración.
+- `supabase/schema.sql` define la tabla de jugadores. Las cuentas online solo funcionarán cuando se ejecute ese SQL y se configuren en Vercel las variables de `.env.example`; no hay credenciales reales guardadas en el repositorio.
+- `src/room-manager.mjs` es un núcleo de salas en memoria, sin transporte de red. Esta fase añade reconexión temporal y revisiones de estado.
 
-Use a small Node.js service with Socket.IO (WebSocket transport with reconnect support) as the authoritative room server. Keep the static browser client separate and connect it to the service over HTTPS/WSS.
+Por tanto, hay una API de cuentas, pero **todavía no hay backend multijugador en tiempo real**.
 
-- **Room lifecycle:** host creates a private room; server generates a unique six-character code using a cryptographically secure random source; guests join by code; rooms expire automatically when idle.
-- **Identity:** assign each connection a server-side session/player ID. Treat display names as untrusted presentation data. Do not put secrets or privileged server credentials in browser code.
-- **Authority:** server owns room membership, host, phase, timer, role assignments, clues, votes and win conditions. Clients send actions; server validates them and broadcasts the resulting state. Never trust a client-reported role, vote total, timer or win.
-- **Realtime events (proposed contract):**
-  - Client → server: `room:create`, `room:join`, `room:leave`, `game:action`, `meeting:vote`.
-  - Server → client: `room:created`, `room:updated`, `room:error`, `game:state`, `meeting:results`.
-  - Every event should include a protocol version and server-generated room revision. Validate payload shape, size, membership and allowed phase before applying it.
-- **Disconnects:** mark a player temporarily disconnected and allow a short reconnect grace period; remove abandoned rooms after their TTL. Transfer host only under a documented rule.
-- **Abuse resistance:** rate-limit room creation and join attempts, cap room size, use unpredictable codes, reject malformed payloads, and avoid exposing private room state to non-members.
-- **Deployment:** host the Node service on a platform that supports persistent WebSocket connections; configure the browser's public `VITE_*`/runtime endpoint to the HTTPS service URL. Keep any signing keys or admin secrets only in server-side environment variables.
+## Propuesta técnica breve
 
-## Implemented now: testable room core
+1. **Transporte:** servicio Node.js persistente con Socket.IO y WSS. El navegador puede seguir alojado como web estática; el servidor de sockets se despliega por separado en un host que mantenga conexiones WebSocket.
+2. **Identidad:** el cliente presenta el token de cuenta en el handshake. El servidor lo valida con la misma clave HMAC y obtiene el ID desde el token; nunca acepta un `playerId` enviado por el cliente. En el handshake también debe comprobar que la cuenta sigue activa/no bloqueada.
+3. **Salas privadas:** el servidor genera códigos de seis caracteres con `crypto`, limita la sala a 8 jugadores por defecto, comprueba cada entrada y elimina salas caducadas. El host puede iniciar cuando haya al menos dos jugadores conectados.
+4. **Desconexión:** conservar al jugador durante 30 segundos para permitir reconexión; después retirarlo y transferir el host al primer jugador conectado. El servidor entrega una instantánea al reconectar.
+5. **Sincronización:** el servidor es la autoridad del estado. Cada cambio incrementa `revision`; el cliente solo aplica revisiones más nuevas. Los clientes envían acciones, no estados finales, roles, votos contados ni temporizadores. El servidor valida fase, pertenencia, permisos y límites antes de difundir el nuevo estado.
 
-`src/room-manager.mjs` implements an in-memory room lifecycle core: create, join, leave, host transfer, host-only start, capacity checks, code validation and expiry. It uses Node's `crypto.randomInt` for room codes. The module is deliberately transport-agnostic so it can later be called by Socket.IO handlers.
+### Contrato de eventos propuesto
 
-This is **not yet a live multiplayer backend**. Rooms exist only inside one Node process, disappear when it stops, and are not reachable from the current browser page. There is no authentication, persistent storage, network transport, reconnect grace period or shared deployment yet.
+- Cliente → servidor: `room:create`, `room:join`, `room:leave`, `room:reconnect`, `game:action`, `meeting:vote`.
+- Servidor → cliente: `room:created`, `room:state`, `room:error`, `game:state`, `meeting:results`.
+- Los mensajes de estado incluyen `protocolVersion` y `revision`. Las instantáneas privadas solo se envían a miembros de esa sala; los roles ocultos se entregan individualmente.
 
-## Next integration steps
+## Implementado y verificable en esta fase
 
-1. Add a Socket.IO server that maps the proposed events to `RoomManager`.
-2. Add server-issued session IDs and reconnect tokens with safe expiry.
-3. Define and test authoritative game-state transitions (roles, clue collection, meetings and voting).
-4. Add a browser lobby UI and connect it to the server endpoint.
-5. Deploy the server with WSS, configure the public endpoint, then run a two-browser end-to-end test.
+`RoomManager` ahora incluye:
 
-## Run the room-core tests
+- códigos privados aleatorios, capacidad y transferencia de host;
+- desconexión y reconexión con una ventana predeterminada de 30 segundos;
+- expulsión automática de conexiones cuya ventana expiró;
+- bloqueo del inicio si el host está desconectado o quedan menos de dos jugadores conectados;
+- un contador `revision` que aumenta cuando cambia el estado de la sala.
 
-Requires Node.js 20 or newer:
+Las nueve pruebas de `test/room-manager.test.mjs` cubren creación, entrada, límites, inicio, salida, caducidad, reconexión, expiración de reconexión y revisiones. Ejecutar con Node.js 20 o superior:
 
 ```bash
 npm test
 ```
+
+## Lo que falta antes de jugar online
+
+- instalar y configurar Socket.IO en un servidor persistente;
+- conectar el handshake con los tokens de cuenta y comprobar el estado de bloqueo;
+- guardar o coordinar salas si se ejecuta más de una instancia del servidor;
+- implementar el estado autoritativo de la partida (personajes, roles, pistas, reuniones, votos y victoria);
+- conectar la maqueta de sala de `index.html` al endpoint WSS;
+- configurar la URL pública del servidor y probar dos navegadores/dispositivos.
+
+El núcleo actual es una base local de servidor y **no crea salas online por sí solo**. No se han añadido claves, tokens ni endpoints ficticios.
