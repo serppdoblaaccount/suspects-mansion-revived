@@ -40,7 +40,7 @@ Abre `index.html` para ver el menú actual. Para jugar la demo individual origin
 
 ## Próximos pasos
 
-1. Conectar `RoomManager` a un servidor Node.js persistente con Socket.IO.
+1. Crear el endpoint WebSocket de Vercel y coordinar las salas entre instancias con Redis/pub-sub.
 2. Validar tokens de cuenta en el handshake y derivar la identidad desde el token.
 3. Implementar y probar el estado autoritativo de cada partida.
 4. Conectar la pantalla de sala del navegador y sincronizar instantáneas por revisión.
