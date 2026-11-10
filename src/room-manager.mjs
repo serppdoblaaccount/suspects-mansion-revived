@@ -15,7 +15,7 @@ function makeCode(length = 6) {
 
 function cleanName(value) {
   if (typeof value !== "string") return "";
-  return value.trim().replace(/\\s+/g, " ").slice(0, 18);
+  return value.trim().replace(/\s+/g, " ").slice(0, 18);
 }
 
 export class RoomManager {
