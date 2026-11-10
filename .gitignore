@@ -1,0 +1,11 @@
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+
+# Dependencies and generated output
+node_modules/
+coverage/
+.vercel/
+*.log
+.DS_Store
