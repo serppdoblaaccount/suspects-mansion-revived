@@ -91,3 +91,13 @@ test("requires two connected players and a connected host to start", () => {
   rooms.disconnectPlayer({ code: "ABCD23", playerId: "p1", now: 105 });
   assert.throws(() => rooms.startRoom({ code: "ABCD23", playerId: "p1", now: 106 }), /HOST_DISCONNECTED/);
 });
+
+test("normalizes repeated whitespace in player names", () => {
+  const rooms = new RoomManager({ codeFactory: () => "ABCD23" });
+  const room = rooms.createRoom({
+    playerId: "p1",
+    playerName: "  Chief  \t  Detective\n  ",
+    now: 100
+  });
+  assert.equal(room.players[0].name, "Chief Detective");
+});
