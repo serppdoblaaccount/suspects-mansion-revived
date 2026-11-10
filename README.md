@@ -4,38 +4,46 @@ Juego fan-made para navegador inspirado en los juegos de misterio social.
 
 ## Estado del proyecto
 
-- **Demo 0.1:** juego individual en `index.html`, con mapa, movimiento, tres pistas y temporizador.
-- **Base 0.2:** núcleo de salas privadas en memoria, separado del transporte de red y cubierto por pruebas automatizadas.
-- **Cuentas online:** API preparada para Supabase y Vercel; necesita configurar las variables de entorno y ejecutar el SQL.
-- **Admin Panel:** lista cuentas online y permite bloquear/desbloquear jugadores. El servidor verifica el ID administrador.
+- **Demo 0.1:** demo individual original conservada en `demo-0.1.html`.
+- **Menú actual:** `index.html`, con selección de personajes, acceso a cuentas y una maqueta de salas todavía sin conexión.
+- **Cuentas online:** API implementada en `api/auth.js` y `api/admin.js`, respaldada por Supabase. Requiere ejecutar `supabase/schema.sql` y configurar las variables privadas indicadas en `.env.example`.
+- **Base multijugador:** `src/room-manager.mjs` gestiona salas privadas en memoria, códigos, capacidad, host, reconexión temporal y revisiones de estado.
+- **Multijugador real:** todavía no disponible. No hay servidor Socket.IO/WSS conectado al navegador.
 
-## Estructura
+## Estructura principal
 
-- `index.html` — demo web individual actual.
-- `src/room-manager.mjs` — lógica de crear, entrar, salir y comenzar salas.
-- `test/room-manager.test.mjs` — pruebas del ciclo de vida de las salas.
-- `docs/multiplayer-architecture.md` — propuesta de arquitectura, eventos y próximos pasos.
+- `index.html` — menú y pantallas actuales.
+- `demo-0.1.html` — demo local original.
+- `api/auth.js` — registro, inicio de sesión y configuración inicial de admin.
+- `api/admin.js` — API del panel de administración.
+- `supabase/schema.sql` — esquema de cuentas.
+- `src/room-manager.mjs` — núcleo de salas independiente del transporte.
+- `test/room-manager.test.mjs` — pruebas automatizadas del núcleo de salas.
+- `docs/online-accounts-setup.md` — configuración de Supabase y Vercel.
+- `docs/multiplayer-architecture.md` — propuesta de salas y sincronización en tiempo real.
 
-## Configurar cuentas online\n\nSigue `docs/online-accounts-setup.md`. Hasta configurar Supabase y las variables de Vercel, el registro online no funcionará.\n\n## Ejecutar las pruebas
+## Ejecutar las pruebas
 
-Requiere Node.js 20 o superior. No hay dependencias externas:
+Requiere Node.js 20 o superior. El núcleo de salas no necesita dependencias externas:
 
 ```bash
 npm test
 ```
 
-## Jugar la demo
+## Configurar cuentas online
 
-Abre `index.html` en un navegador. Si GitHub Pages está activado, la URL prevista es:
+Sigue `docs/online-accounts-setup.md`. Hasta ejecutar el SQL y añadir las variables de entorno privadas en el despliegue, el registro y el inicio de sesión online no funcionarán. No subas un archivo `.env` ni claves privadas a GitHub.
 
-`https://serppdoblaaccount.github.io/suspects-mansion-revived/`
+## Probar el juego
 
-## Próximas fases
+Abre `index.html` para ver el menú actual. Para jugar la demo individual original, abre `demo-0.1.html`.
 
-1. Añadir un servidor Socket.IO que use el núcleo de salas.
-2. Crear una identidad de sesión y reconexión segura.
-3. Sincronizar el estado de la partida desde el servidor.
-4. Conectar una pantalla de crear/unirse a salas desde el navegador.
-5. Desplegar el backend y probar una partida entre dos navegadores.
+## Próximos pasos
 
-**Aviso:** las salas añadidas en esta fase solo son lógica local de servidor y no permiten todavía jugar online. Este es un proyecto fan-made, no un producto oficial de Suspects: Mystery Mansion.
+1. Conectar `RoomManager` a un servidor Node.js persistente con Socket.IO.
+2. Validar tokens de cuenta en el handshake y derivar la identidad desde el token.
+3. Implementar y probar el estado autoritativo de cada partida.
+4. Conectar la pantalla de sala del navegador y sincronizar instantáneas por revisión.
+5. Desplegar el servidor WSS y probar una partida entre dos dispositivos.
+
+**Aviso:** proyecto fan-made no oficial de Suspects: Mystery Mansion. La lógica de salas actual es local al proceso y no permite todavía jugar online.
